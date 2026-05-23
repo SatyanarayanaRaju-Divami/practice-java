@@ -4,6 +4,8 @@ import com.example.practicejava.appconfig.dto.AppConfigResponse;
 import com.example.practicejava.appconfig.dto.UpdateAppConfigRequest;
 import com.example.practicejava.appconfig.service.AppConfigService;
 import com.example.practicejava.common.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Tag(name = "Configuration", description = "Admin-only application config key-value pairs")
 @RestController
 @RequestMapping("/api/v1/config")
 public class AppConfigController {
@@ -26,12 +29,14 @@ public class AppConfigController {
         this.appConfigService = appConfigService;
     }
 
+    @Operation(summary = "List all configuration entries")
     @GetMapping
     public ResponseEntity<ApiResponse<List<AppConfigResponse>>> list(HttpServletRequest req) {
         List<AppConfigResponse> configs = appConfigService.findAll().stream().map(AppConfigResponse::from).toList();
         return ResponseEntity.ok(ApiResponse.ok(configs, req.getRequestURI()));
     }
 
+    @Operation(summary = "Update a configuration value by key")
     @PutMapping("/{key}")
     public ResponseEntity<ApiResponse<AppConfigResponse>> update(@PathVariable String key,
                                                                    @Valid @RequestBody UpdateAppConfigRequest request,

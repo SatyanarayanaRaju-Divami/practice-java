@@ -12,12 +12,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.Instant;
 
 @Entity
 @Table(name = "predictions_match",
         uniqueConstraints = @UniqueConstraint(columnNames = {"match_id", "user_id"}))
+@SQLRestriction("is_deleted = false")
 public class MatchPrediction extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

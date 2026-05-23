@@ -1,6 +1,7 @@
 package com.example.practicejava.common;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -37,6 +38,19 @@ public class GlobalExceptionHandler {
                                                                    HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiErrorResponse.of("Invalid credentials", request.getRequestURI()));
+    }
+
+    // Catches DB trigger violations for prediction lock enforcement
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex,
+                                                                  HttpServletRequest request) {
+        String msg = ex.getMostSpecificCause().getMessage();
+        if (msg != null && msg.contains("PREDICTION_LOCKED")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiErrorResponse.of("Prediction window is closed", request.getRequestURI()));
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiErrorResponse.of("Data integrity violation", request.getRequestURI()));
     }
 
     // Handles all @ResponseStatus-annotated exceptions (NotFoundExceptions, EmailAlreadyExistsException, etc.)

@@ -7,6 +7,8 @@ import com.example.practicejava.player.dto.UpdatePlayerRequest;
 import com.example.practicejava.player.repository.PlayerRepository;
 import com.example.practicejava.team.Team;
 import com.example.practicejava.team.service.TeamService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,8 +38,18 @@ public class PlayerService {
     }
 
     @Transactional(readOnly = true)
+    public Page<Player> findAll(Pageable pageable) {
+        return playerRepository.findAll(pageable);
+    }
+
+    @Transactional(readOnly = true)
     public List<Player> findByTeamId(UUID teamId) {
         return playerRepository.findByTeam_Id(teamId);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Player> findByTeamId(UUID teamId, Pageable pageable) {
+        return playerRepository.findByTeam_Id(teamId, pageable);
     }
 
     public Player create(CreatePlayerRequest request) {

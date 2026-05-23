@@ -19,6 +19,9 @@ public class Player extends BaseEntity {
     @JoinColumn(name = "team_id", nullable = false)
     private Team team;
 
+    @Column(name = "team_name", nullable = false)
+    private String teamName;
+
     @Column(nullable = false)
     private String name;
 
@@ -29,11 +32,17 @@ public class Player extends BaseEntity {
 
     public Player(Team team, String name) {
         this.team = team;
+        this.teamName = team.getName();
         this.name = name;
     }
 
     public Team getTeam() { return team; }
-    public void setTeam(Team team) { this.team = team; }
+    public void setTeam(Team team) {
+        this.team = team;
+        this.teamName = team.getName();
+    }
+
+    public String getTeamName() { return teamName; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

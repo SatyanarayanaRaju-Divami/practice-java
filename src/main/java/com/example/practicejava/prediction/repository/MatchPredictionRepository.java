@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface MatchPredictionRepository extends JpaRepository<MatchPrediction, UUID> {
     Optional<MatchPrediction> findByMatchIdAndUserId(UUID matchId, UUID userId);
     List<MatchPrediction> findByMatchId(UUID matchId);
+    org.springframework.data.domain.Page<MatchPrediction> findByMatchId(UUID matchId, org.springframework.data.domain.Pageable pageable);
 }

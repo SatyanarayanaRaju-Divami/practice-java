@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface ScoreBreakdownRepository extends JpaRepository<ScoreBreakdown, UUID> {
     List<ScoreBreakdown> findByScoreId(UUID scoreId);
+    List<ScoreBreakdown> findByScoreSeasonIdAndScoreUserId(UUID seasonId, UUID userId);
 }

@@ -11,11 +11,13 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.Instant;
 
 @Entity
 @Table(name = "matches")
+@SQLRestriction("is_deleted = false")
 public class Match extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
