@@ -1,6 +1,6 @@
 package com.example.practicejava.auth;
 
-import com.example.practicejava.appconfig.AppConfigRepository;
+import com.example.practicejava.appconfig.repository.AppConfigRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
