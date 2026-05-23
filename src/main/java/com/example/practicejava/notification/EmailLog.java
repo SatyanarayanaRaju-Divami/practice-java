@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "email_log")
@@ -43,6 +44,9 @@ public class EmailLog extends BaseEntity {
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
+    @Column(name = "reference_id")
+    private UUID referenceId;
+
     protected EmailLog() {}
 
     public EmailLog(User recipientUser, String recipientEmail, String eventType, String subject) {
@@ -71,4 +75,7 @@ public class EmailLog extends BaseEntity {
 
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+
+    public UUID getReferenceId() { return referenceId; }
+    public void setReferenceId(UUID referenceId) { this.referenceId = referenceId; }
 }

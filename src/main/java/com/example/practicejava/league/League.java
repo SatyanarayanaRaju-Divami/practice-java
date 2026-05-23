@@ -4,9 +4,11 @@ import com.example.practicejava.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "leagues")
+@SQLRestriction("is_deleted = false")
 public class League extends BaseEntity {
 
     @Column(nullable = false, unique = true)

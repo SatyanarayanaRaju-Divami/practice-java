@@ -31,8 +31,13 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/admin").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/users").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/matches/*/result").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/seasons/*/publish-result").hasRole("ADMIN")
+                .requestMatchers("/api/v1/notifications/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
