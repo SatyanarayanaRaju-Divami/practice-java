@@ -1,7 +1,7 @@
 package com.example.practicejava.match;
 
 import com.example.practicejava.common.BaseEntity;
-import com.example.practicejava.team.Player;
+import com.example.practicejava.player.Player;
 import com.example.practicejava.team.Team;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -2,7 +2,7 @@ package com.example.practicejava.prediction;
 
 import com.example.practicejava.common.BaseEntity;
 import com.example.practicejava.match.Match;
-import com.example.practicejava.team.Player;
+import com.example.practicejava.player.Player;
 import com.example.practicejava.team.Team;
 import com.example.practicejava.user.User;
 import jakarta.persistence.Column;

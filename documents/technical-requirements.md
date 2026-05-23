@@ -118,7 +118,7 @@ All entities extend `BaseEntity`. Spring Data `AuditorAware` auto-populates audi
 - id, name, description
 
 **seasons** (instance of a league)
-- id, league_id, name, status (DRAFT | OPEN | LOCKED | CLOSED), first_match_start_time, league_lock_time (derived), created by admin
+- id, league_id, name, status (DRAFT | OPEN | LOCKED | COMPLETED | CLOSED), first_match_start_time, league_lock_time (derived), created by admin
 
 **teams**
 - id, name, logo_url (teams are independent of seasons)
@@ -202,6 +202,20 @@ The API collection and OpenAPI documentation must together be sufficient for an 
 - Error responses include `code`, `message`, and `fieldErrors` (for validation failures)
 - All list endpoints support: `page`, `size`, `sort` (field + direction), and relevant `search` / `filter` query params
 
+**Search and filter fields per endpoint:**
+
+| Endpoint | Searchable / Filterable fields |
+|---|---|
+| `GET /leagues` | `name` (contains) |
+| `GET /leagues/{id}/seasons` | `status`, `name` |
+| `GET /teams` | `name` (contains) |
+| `GET /teams/{id}/players` | `name` (contains) |
+| `GET /seasons/{id}/matches` | `status`, `scheduled_at` (date range), `home_team_id`, `away_team_id` |
+| `GET /users` | `email`, `display_name`, `role` |
+| `GET /notifications/emails` | `status`, `event_type`, `recipient_email`, `sent_at` (date range) |
+| `GET /seasons/{id}/leaderboard` | sortable by `rank`, `total_points` |
+| `GET /seasons/{id}/standings` | sortable by `current_position`, `points_in_league` |
+
 ### 5.3 Endpoint Groups
 
 #### Auth
@@ -223,18 +237,24 @@ The API collection and OpenAPI documentation must together be sufficient for an 
 |---|---|---|
 | POST | `/leagues` | ADMIN |
 | GET | `/leagues` | USER, ADMIN |
+| GET | `/leagues/{leagueId}` | USER, ADMIN |
 | POST | `/leagues/{leagueId}/seasons` | ADMIN |
 | GET | `/leagues/{leagueId}/seasons` | USER, ADMIN |
-| PUT | `/seasons/{seasonId}/close` | ADMIN |
+| GET | `/seasons/{seasonId}` | USER, ADMIN |
+| PUT | `/seasons/{seasonId}/activate` | ADMIN — transitions DRAFT → OPEN |
+| PUT | `/seasons/{seasonId}/close` | ADMIN — transitions COMPLETED → CLOSED |
 
 #### Teams & Players
 | Method | Path | Access |
 |---|---|---|
 | POST | `/teams` | ADMIN |
 | GET | `/teams` | USER, ADMIN |
+| GET | `/teams/{teamId}` | USER, ADMIN |
 | POST | `/teams/{teamId}/players` | ADMIN |
 | GET | `/teams/{teamId}/players` | USER, ADMIN |
+| GET | `/players/{playerId}` | USER, ADMIN |
 | POST | `/seasons/{seasonId}/teams` | ADMIN |
+| DELETE | `/seasons/{seasonId}/teams/{teamId}` | ADMIN — soft removes team from season |
 
 #### Matches
 | Method | Path | Access |
@@ -248,6 +268,7 @@ The API collection and OpenAPI documentation must together be sufficient for an 
 | Method | Path | Access |
 |---|---|---|
 | POST | `/matches/{matchId}/result` | ADMIN |
+| GET | `/matches/{matchId}/result` | USER, ADMIN |
 | PUT | `/seasons/{seasonId}/result` | ADMIN |
 
 #### Predictions
@@ -274,6 +295,12 @@ Returns the real-world team position table for the season (updated after each ma
 |---|---|---|
 | GET | `/seasons/{seasonId}/leaderboard` | USER, ADMIN |
 
+#### App Config (Admin)
+| Method | Path | Access |
+|---|---|---|
+| GET | `/config` | ADMIN |
+| PUT | `/config/{key}` | ADMIN |
+
 #### Notifications (Admin)
 | Method | Path | Access |
 |---|---|---|
@@ -287,8 +314,33 @@ Returns the real-world team position table for the season (updated after each ma
 - `lock_time` is stored on each `match` record and computed at creation: `scheduled_at - match_lock_offset`
 - League lock time is `first_match_scheduled_at - league_lock_offset`
 - On any prediction submission, the service layer checks `now() < lock_time`
-- Additionally, a **DB-level check constraint** on `predictions_match.submitted_at <= matches.lock_time` ensures integrity even if application logic is bypassed
 - After lock, the `match.status` transitions to `LOCKED` via a scheduled job
+
+### 6.1 DB-Level Lock Enforcement (Trigger)
+
+PostgreSQL `CHECK` constraints cannot reference another table, so DB-level enforcement is implemented as a `BEFORE INSERT OR UPDATE` trigger on `predictions_match` and `predictions_league`:
+
+```sql
+-- Example for predictions_match
+CREATE OR REPLACE FUNCTION check_match_prediction_lock()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_lock_time TIMESTAMP WITH TIME ZONE;
+BEGIN
+    SELECT lock_time INTO v_lock_time FROM matches WHERE id = NEW.match_id;
+    IF now() >= v_lock_time THEN
+        RAISE EXCEPTION 'Prediction window is closed for match %', NEW.match_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_check_match_prediction_lock
+BEFORE INSERT OR UPDATE ON predictions_match
+FOR EACH ROW EXECUTE FUNCTION check_match_prediction_lock();
+```
+
+A corresponding trigger is added for `predictions_league` checking against `season.league_lock_time`. Both triggers are added in a dedicated Flyway migration (`V11__add_prediction_lock_triggers.sql`).
 
 ---
 
@@ -318,6 +370,9 @@ The `league_standings` table is updated first (part of result processing). Once 
 - Each `predictions_league` row is compared to the final `league_standings` positions
 - A matching `predicted_position = current_position` earns 1 point per team correctly placed
 
+### 7.3 Scoring Rule Decision
+The requirements state "One Prediction adds one point to the user score in the league." This is interpreted as **one correct prediction = one point** (not one point per submission regardless of correctness). Rationale: awarding points for incorrect predictions removes all competitive value. This decision must be recorded in the decision log.
+
 ---
 
 ## 8. Notification System
@@ -330,14 +385,21 @@ The `league_standings` table is updated first (part of result processing). Once 
 
 | Job | Trigger | Action |
 |---|---|---|
-| Match reminder | Configurable time before lock (e.g., 2 hrs) | Find users with no prediction for upcoming match → send reminder email |
-| Lock enforcement | At `lock_time` of each match | Set `match.status = LOCKED` |
+| Match prediction reminder | Configurable time before lock (e.g., 2 hrs) | Find users with no prediction for upcoming match → send reminder email |
+| Match lock enforcement | At `lock_time` of each match | Set `match.status = LOCKED` |
 | League lock enforcement | At league lock time | Set `season.status = LOCKED` |
+| Admin result pending alert | Configurable window after `match.scheduled_at` passes with no published result | Send alert email to admin listing unpublished matches |
 
 - Jobs use Spring `@Scheduled` with cron or fixed-delay expressions
-- Job intervals are configurable via `app_config` table
+- Job intervals and trigger windows are configurable via `app_config` table
 
-### 8.3 Bulk Communication
+### 8.3 User Notifications After Result Published
+After admin publishes a match result and the scoring engine completes:
+- Each user whose score changed receives an email summarising their points earned for that match and their current leaderboard rank
+- This fires as part of the async result processing pipeline, after `ScoreCalculationService` completes
+- Email is logged to `email_log` per recipient
+
+### 8.4 Bulk Communication
 - Admin selects target users, event type, and custom message body
 - System sends emails and logs each one to `email_log`
 
@@ -352,6 +414,7 @@ All runtime-tunable values stored in `app_config` table:
 | `match.lock.offset.hours` | `1` | Hours before match start to lock predictions |
 | `league.lock.offset.hours` | `4` | Hours before first match to lock league predictions |
 | `match.reminder.offset.hours` | `2` | When to send reminder emails before match lock |
+| `result.pending.alert.hours` | `2` | Hours after match scheduled_at to alert admin if result not yet published |
 | `jwt.expiry.seconds` | `86400` | JWT token TTL |
 | `leaderboard.recalc.async` | `true` | Whether leaderboard recalc runs async |
 

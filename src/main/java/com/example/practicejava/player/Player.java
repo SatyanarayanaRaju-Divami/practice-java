@@ -1,15 +1,18 @@
-package com.example.practicejava.team;
+package com.example.practicejava.player;
 
 import com.example.practicejava.common.BaseEntity;
+import com.example.practicejava.team.Team;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "players")
+@SQLRestriction("is_deleted = false")
 public class Player extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
