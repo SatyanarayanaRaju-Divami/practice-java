@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -23,7 +24,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public User findById(Long id) {
+    public User findById(UUID id) {
         return userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
     }
 
@@ -31,14 +32,14 @@ public class UserService {
         return userRepository.save(new User(request.name(), request.email()));
     }
 
-    public User update(Long id, UpdateUserRequest request) {
+    public User update(UUID id, UpdateUserRequest request) {
         User user = findById(id);
         user.setName(request.name());
         user.setEmail(request.email());
         return user;
     }
 
-    public void delete(Long id) {
+    public void delete(UUID id) {
         if (!userRepository.existsById(id)) {
             throw new UserNotFoundException(id);
         }

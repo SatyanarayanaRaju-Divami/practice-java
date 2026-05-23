@@ -1,62 +1,61 @@
 package com.example.practicejava.user;
 
+import com.example.practicejava.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.CreationTimestamp;
-
-import java.time.Instant;
 
 @Entity
 @Table(name = "users")
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false)
-    private String name;
+public class User extends BaseEntity {
 
     @Column(nullable = false, unique = true)
     private String email;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
+    @Column(name = "password_hash")
+    private String passwordHash;
 
-    protected User() {
-    }
+    @Column(name = "display_name", nullable = false)
+    private String displayName;
 
-    public User(String name, String email) {
-        this.name = name;
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role = UserRole.USER;
+
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive = true;
+
+    protected User() {}
+
+    public User(String displayName, String email) {
+        this.displayName = displayName;
         this.email = email;
     }
 
-    public Long getId() {
-        return id;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public String getName() {
-        return name;
-    }
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
 
-    public String getEmail() {
-        return email;
-    }
+    // kept as getName() so existing service/controller code compiles without changes
+    public String getName() { return displayName; }
+    public void setName(String name) { this.displayName = name; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
+    public UserRole getRole() { return role; }
+    public void setRole(UserRole role) { this.role = role; }
+
+    public boolean isActive() { return isActive; }
+    public void setActive(boolean active) { isActive = active; }
 }
